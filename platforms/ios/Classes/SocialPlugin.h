@@ -1,5 +1,6 @@
 #import <Cordova/CDVPlugin.h>
 #import <Foundation/Foundation.h>
+#import <Accounts/Accounts.h>
 
 @interface SocialPlugin : CDVPlugin
 
