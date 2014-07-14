@@ -1,8 +1,6 @@
 #import "SocialPlugin.h"
 
 @implementation SocialPlugin
-
-@implementation SocialPlugin
 - (void) getAvailableAccounts:(CDVInvokedUrlCommand*)command;
 {
     NSArray *types = [command.arguments objectAtIndex:0];

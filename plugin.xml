@@ -19,6 +19,7 @@
         <header-file src="platforms/ios/Classes/SocialPlugin.h" />
         <source-file src="platforms/ios/Classes/SocialPlugin.m" />
         <framework src="Social.framework" />
+        <framework src="Accounts.framework" />
     </platform>
     <platform name="android">
         <config-file target="res/xml/config.xml" parent="/*">
