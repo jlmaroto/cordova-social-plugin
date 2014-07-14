@@ -1,6 +1,6 @@
-#import "SocialMessage.h"
+#import "SocialPlugin.h"
 
-@implementation SocialMessage
+@implementation SocialPlugin
 
 - (void) chooseAndSend:(CDVInvokedUrlCommand*)command;
 {
