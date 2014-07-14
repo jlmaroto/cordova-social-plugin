@@ -8,7 +8,7 @@
         <engine name="cordova" version=">=3.0.0" />
     </engines>
     <js-module src="www/js/SocialPlugin.js" name="SocialPlugin">
-        <clobbers target="socialPlugin" />
+        <clobbers target="SocialPlugin" />
     </js-module>
     <platform name="ios">
         <config-file target="config.xml" parent="/*">

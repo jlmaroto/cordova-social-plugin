@@ -4,5 +4,6 @@
 @interface SocialPlugin : CDVPlugin
 
 - (void) chooseAndSend:(CDVInvokedUrlCommand*)command;
+- (void) getAvailableAccounts:(CDVInvokedUrlCommand*)command;
 
 @end

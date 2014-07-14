@@ -2,6 +2,27 @@
 
 @implementation SocialPlugin
 
+@implementation SocialPlugin
+- (void) getAvailableAccounts:(CDVInvokedUrlCommand*)command;
+{
+    NSArray *types = [command.arguments objectAtIndex:0];
+    ACAccountStore *accountStore = [[ACAccountStore alloc] init];
+
+    NSArray *accounts= [NSArray array];
+    
+    for (NSString *t in types) {
+        ACAccountType *type = [accountStore accountTypeWithAccountTypeIdentifier:t];
+    
+        NSArray *arrayOfAccounts = [accountStore accountsWithAccountType:type];
+        accounts= [accounts arrayByAddingObjectsFromArray:arrayOfAccounts];
+        
+    }
+    [self.commandDelegate sendPluginResult:[ CDVPluginResult
+                                            resultWithStatus    : CDVCommandStatus_OK
+                                            messageAsArray:accounts
+                                            ] callbackId:command.callbackId];
+}
+
 - (void) chooseAndSend:(CDVInvokedUrlCommand*)command;
 {
     NSMutableDictionary *args = [command.arguments objectAtIndex:0];
