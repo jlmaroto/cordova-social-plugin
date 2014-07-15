@@ -7,13 +7,13 @@
     <engines>
         <engine name="cordova" version=">=3.0.0" />
     </engines>
-    <js-module src="www/js/SocialPlugin.js" name="SocialPlugin">
-        <clobbers target="SocialPlugin" />
+    <js-module src="www/js/SocialPlugin.js" name="socialplugin">
+        <clobbers target="socialplugin" />
     </js-module>
     <platform name="ios">
         <config-file target="config.xml" parent="/*">
-            <feature name="SocialPlugin">
-                <param name="ios-package" value="SocialPlugin" />
+            <feature name="socialplugin">
+                <param name="ios-package" value="socialplugin" />
             </feature>
         </config-file>
         <header-file src="platforms/ios/Classes/SocialPlugin.h" />
@@ -30,6 +30,6 @@
         <config-file target="AndroidManifest.xml" parent="/*">
             <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
         </config-file>
-        <source-file src="platforms/android/SocialPlugin.java" target-dir="src/es/peanutbutter/socialmessage" />
+        <source-file src="platforms/android/SocialPlugin.java" target-dir="src/es/peanutbutter/socialplugin" />
     </platform>
 </plugin>

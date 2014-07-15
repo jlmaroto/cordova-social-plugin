@@ -1,24 +1,326 @@
+#import <Social/Social.h>
 #import "SocialPlugin.h"
 
-@implementation SocialPlugin
-- (void) getAvailableAccounts:(CDVInvokedUrlCommand*)command;
-{
-    NSArray *types = [command.arguments objectAtIndex:0];
-    ACAccountStore *accountStore = [[ACAccountStore alloc] init];
 
-    NSArray *accounts= [NSArray array];
+@interface SocialPlugin()
+@property (nonatomic, strong) ACAccountStore *accountStore;
+@end
+
+@implementation SocialPlugin
+
+- (id)init
+{
+    self = [super init];
+    if (self) {
+        _accountStore = [[ACAccountStore alloc] init];
+    }
+    return self;
+}
+
+NSMutableDictionary* facebookOptions;
+
+- (void) setFacebookIdentityData:(CDVInvokedUrlCommand *)command;
+{
+    if(_accountStore==nil){
+        [self init];
+    }
+    NSMutableDictionary *args = [command.arguments objectAtIndex:0];
     
-    for (NSString *t in types) {
-        ACAccountType *type = [accountStore accountTypeWithAccountTypeIdentifier:t];
+    facebookOptions=[[NSMutableDictionary alloc]init];
     
-        NSArray *arrayOfAccounts = [accountStore accountsWithAccountType:type];
-        accounts= [accounts arrayByAddingObjectsFromArray:arrayOfAccounts];
-        
+    if(args[@"ACFacebookAppIdKey"]==nil){
+        [self.commandDelegate sendPluginResult:[ CDVPluginResult
+                                                resultWithStatus    : CDVCommandStatus_ERROR
+                                                messageAsString:@"You must provide an AppId"
+                                                ] callbackId:command.callbackId];
+    }else{
+        facebookOptions[ACFacebookAppIdKey]=args[@"ACFacebookAppIdKey"];
+    }
+    
+    if(args[@"ACFacebookPermissionsKey"]!=nil){
+        facebookOptions[ACFacebookPermissionsKey]=args[@"ACFacebookPermissionsKey"];
+    }else{
+        facebookOptions[ACFacebookPermissionsKey]= @[@"email"];
+    }
+    if(args[@"ACFacebookAudienceKey"]!=nil){
+        facebookOptions[ACFacebookAudienceKey]=args[@"ACFacebookAudienceKey"];
+    }else{
+        facebookOptions[ACFacebookAudienceKey]=ACFacebookAudienceFriends;
     }
     [self.commandDelegate sendPluginResult:[ CDVPluginResult
-                                            resultWithStatus    : CDVCommandStatus_OK
-                                            messageAsArray:accounts
-                                            ] callbackId:command.callbackId];
+                                           resultWithStatus    : CDVCommandStatus_OK
+                                           messageAsDictionary:facebookOptions
+                                           ] callbackId:command.callbackId];
+}
+- (void) getFacebookAccount:(CDVInvokedUrlCommand*)command;
+{
+    if(_accountStore==nil){
+        [self init];
+    }
+    
+    if(facebookOptions==nil){
+        [self.commandDelegate sendPluginResult:[ CDVPluginResult
+                                                resultWithStatus    : CDVCommandStatus_ERROR
+                                                messageAsString:@"You must set Facebook identity before using any facebook call"
+                                                ] callbackId:command.callbackId];
+        return;
+    }
+    if(facebookOptions[ACFacebookAppIdKey]==nil||[facebookOptions[ACFacebookAppIdKey] isEqual:@""]){
+        [self.commandDelegate sendPluginResult:[ CDVPluginResult
+                                                resultWithStatus    : CDVCommandStatus_ERROR
+                                                messageAsString:@"You must set Facebook app Id"
+                                                ] callbackId:command.callbackId];
+        return;
+    }
+    
+    ACAccountType *type = [_accountStore accountTypeWithAccountTypeIdentifier:ACAccountTypeIdentifierFacebook];
+    
+    //get basic permission
+    facebookOptions[ACFacebookPermissionsKey]= @[@"email"];
+    
+    [_accountStore requestAccessToAccountsWithType:type options:facebookOptions completion:^(BOOL granted, NSError *error)
+     {
+         NSMutableArray *arrayOfAccounts=[[NSMutableArray alloc] init];
+         if (granted == YES)
+         {
+             NSArray *accounts = [_accountStore accountsWithAccountType:type];
+             for(ACAccount *account in accounts)
+             {
+                 [arrayOfAccounts addObject:account.username];
+             }
+             [self.commandDelegate sendPluginResult:[ CDVPluginResult
+                                                     resultWithStatus    : CDVCommandStatus_OK
+                                                     messageAsArray:arrayOfAccounts
+                                                     ] callbackId:command.callbackId];
+         }else{
+             [self.commandDelegate sendPluginResult:[ CDVPluginResult
+                                                     resultWithStatus    : CDVCommandStatus_ERROR
+                                                     messageAsString:[error localizedDescription]
+                                                     ] callbackId:command.callbackId];
+         }
+     }];
+}
+-(void) postToFacebook:(CDVInvokedUrlCommand*)command;
+{
+    if(_accountStore==nil){
+        [self init];
+    }
+    NSMutableDictionary *args = [command.arguments objectAtIndex:0];
+    NSString *username=[args objectForKey:@"username"];
+    NSString *text=[args objectForKey:@"text"];
+    NSString *link=[args objectForKey:@"link"];
+    NSString *audience=ACFacebookAudienceFriends;
+    
+    if(text==nil||[text isEqual:@""]){
+        [self.commandDelegate sendPluginResult:[ CDVPluginResult
+                                                resultWithStatus    : CDVCommandStatus_ERROR
+                                                messageAsString:@"No text message"
+                                                ] callbackId:command.callbackId];
+    }
+    
+    if ([[args objectForKeyedSubscript:@"audience"] isEqualToString:@"all"]) {
+        audience=ACFacebookAudienceEveryone;
+    }else if([[args objectForKeyedSubscript:@"audience"] isEqualToString:@"me"]) {
+        audience=ACFacebookAudienceOnlyMe;
+    }else{
+        audience=ACFacebookAudienceFriends;
+    }
+    
+    ACAccountType *facebookAccountType = [self.accountStore
+                                          accountTypeWithAccountTypeIdentifier:ACAccountTypeIdentifierFacebook];
+    
+    // Specify App ID and permissions
+    NSDictionary *options = @{
+                              ACFacebookAppIdKey: facebookOptions[ACFacebookAppIdKey],
+                              ACFacebookPermissionsKey: @[ @"publish_actions"],
+                              ACFacebookAudienceKey: audience
+                              };
+    
+    [_accountStore requestAccessToAccountsWithType:facebookAccountType
+                                          options:options completion:^(BOOL granted, NSError *e) {
+                                              if (granted) {
+                                                  NSArray *accounts = [_accountStore
+                                                                       accountsWithAccountType:facebookAccountType];
+                                                  NSDictionary *parameters = @{@"message": text};
+                                                  if(link!=nil){
+                                                      [parameters setValue:link forKeyPath:@"link"];
+                                                  }
+                                                  
+                                                  NSURL *feedURL = [NSURL URLWithString:@"https://graph.facebook.com/me/feed"];
+                                                  
+                                                  SLRequest *feedRequest = [SLRequest
+                                                                            requestForServiceType:SLServiceTypeFacebook
+                                                                            requestMethod:SLRequestMethodPOST
+                                                                            URL:feedURL
+                                                                            parameters:parameters];
+
+                                                  ACAccount *facebookAccount;
+                                                  if(username==nil){
+                                                      facebookAccount = [accounts lastObject];
+                                                  }else{
+                                                      ACAccount* account;
+                                                      for (account in accounts) {
+                                                          if([account.username isEqual:username]){
+                                                              facebookAccount=account;
+                                                              break;
+                                                          }
+                                                      }
+                                                      if(facebookAccount==nil){
+                                                          facebookAccount = [accounts lastObject];
+                                                      }
+                                                  }
+                                                  
+                                                  feedRequest.account =facebookAccount;
+                                                  
+                                                  [feedRequest performRequestWithHandler:^(NSData *responseData, 
+                                                                                           NSHTTPURLResponse *urlResponse, NSError *error)
+                                                   {
+                                                       if([urlResponse statusCode]==200){
+                                                           [self.commandDelegate sendPluginResult:[ CDVPluginResult
+                                                                                                   resultWithStatus    : CDVCommandStatus_OK
+                                                                                                   messageAsString:@"Post sent"
+                                                                                                   ] callbackId:command.callbackId];
+                                                       }else{
+                                                           
+                                                           [self.commandDelegate sendPluginResult:[ CDVPluginResult
+                                                                                                   resultWithStatus    : CDVCommandStatus_ERROR
+                                                                                                   messageAsString:[[NSString alloc] initWithData:responseData encoding:NSUTF8StringEncoding]
+                                                                                                   ] callbackId:command.callbackId];
+                                                       }
+                                                   }];
+                                              }
+                                              else
+                                              {
+                                                  // Handle Failure
+                                                  [self.commandDelegate sendPluginResult:[ CDVPluginResult
+                                                                                          resultWithStatus    : CDVCommandStatus_ERROR
+                                                                                          messageAsString:[e localizedDescription]
+                                                                                          ] callbackId:command.callbackId];
+
+                                              }
+                                          }];
+    
+    
+}
+- (void) getTwitterAccounts:(CDVInvokedUrlCommand*)command;
+{
+    if(_accountStore==nil){
+        [self init];
+    }
+    ACAccountType *type = [_accountStore accountTypeWithAccountTypeIdentifier:ACAccountTypeIdentifierTwitter];
+    
+    [_accountStore requestAccessToAccountsWithType:type options:nil completion:^(BOOL granted, NSError *error)
+    {
+        NSMutableArray *arrayOfAccounts=[[NSMutableArray alloc] init];
+        if (granted == YES)
+        {
+            NSArray *accounts = [_accountStore accountsWithAccountType:type];
+            for(ACAccount *account in accounts)
+            {
+                [arrayOfAccounts addObject:account.username];
+            }
+            [self.commandDelegate sendPluginResult:[ CDVPluginResult
+                                                    resultWithStatus    : CDVCommandStatus_OK
+                                                    messageAsArray:arrayOfAccounts
+                                                    ] callbackId:command.callbackId];
+        }else{
+            [self.commandDelegate sendPluginResult:[ CDVPluginResult
+                                                    resultWithStatus    : CDVCommandStatus_ERROR
+                                                    messageAsArray:arrayOfAccounts
+                                                    ] callbackId:command.callbackId];
+        }
+    }];
+}
+
+- (void) postToTwitter:(CDVInvokedUrlCommand*)command;
+{
+    if(_accountStore==nil){
+        [self init];
+    }
+    NSMutableDictionary *args = [command.arguments objectAtIndex:0];
+    NSString *username=[args objectForKey:@"username"];
+    NSString *text=[args objectForKey:@"text"];
+    
+    if(text==nil||[text isEqual:@""]){
+        [self.commandDelegate sendPluginResult:[ CDVPluginResult
+                                                resultWithStatus    : CDVCommandStatus_ERROR
+                                                messageAsString:@"No text message"
+                                                ] callbackId:command.callbackId];
+    }
+    
+    ACAccountType *accountType = [_accountStore accountTypeWithAccountTypeIdentifier:
+                                  ACAccountTypeIdentifierTwitter];
+    
+    [_accountStore requestAccessToAccountsWithType:accountType options:nil
+                                  completion:^(BOOL granted, NSError *error)
+    {
+        if (granted == YES)
+        {
+            NSArray *arrayOfAccounts = [_accountStore
+                                        accountsWithAccountType:accountType];
+            
+            if ([arrayOfAccounts count] > 0)
+            {
+                ACAccount *twitterAccount;
+                if(username==nil){
+                    twitterAccount = [arrayOfAccounts lastObject];
+                }else{
+                    ACAccount* account;
+                    for (account in arrayOfAccounts) {
+                        if([account.username isEqual:username]){
+                            twitterAccount=account;
+                            break;
+                        }
+                    }
+                    if(twitterAccount==nil){
+                        twitterAccount = [arrayOfAccounts lastObject];
+                    }
+                }
+                
+                NSDictionary *message = @{@"status": text};
+                
+                NSURL *requestURL = [NSURL
+                                     URLWithString:@"https://api.twitter.com/1.1/statuses/update.json"];
+                
+                SLRequest *postRequest = [SLRequest
+                                          requestForServiceType:SLServiceTypeTwitter
+                                          requestMethod:SLRequestMethodPOST
+                                          URL:requestURL parameters:message];
+                
+                postRequest.account = twitterAccount;
+                NSLog(@"Account %@ message %@",twitterAccount.username,message[@"status"]);
+                
+                [postRequest performRequestWithHandler:^(NSData *responseData,
+                                                         NSHTTPURLResponse *urlResponse, NSError *error)
+                 {
+                     NSLog(@"Twitter HTTP response: %i", [urlResponse
+                                                          statusCode]);
+                     if([urlResponse statusCode]==200){
+                         [self.commandDelegate sendPluginResult:[ CDVPluginResult
+                                                                 resultWithStatus    : CDVCommandStatus_OK
+                                                                 messageAsString:@"Tweet sent"
+                                                                 ] callbackId:command.callbackId];
+                     }else{
+                         
+                         [self.commandDelegate sendPluginResult:[ CDVPluginResult
+                                                                 resultWithStatus    : CDVCommandStatus_ERROR
+                                                                 messageAsString:[[NSString alloc] initWithData:responseData encoding:NSUTF8StringEncoding]
+                                                                 ] callbackId:command.callbackId];
+                     }
+                 }];
+            }else{
+                [self.commandDelegate sendPluginResult:[ CDVPluginResult
+                                                        resultWithStatus    : CDVCommandStatus_ERROR
+                                                        messageAsString:@"No Twitter accounts"
+                                                        ] callbackId:command.callbackId];
+            }
+        }else{
+            [self.commandDelegate sendPluginResult:[ CDVPluginResult
+                                                    resultWithStatus    : CDVCommandStatus_ERROR
+                                                    messageAsString:@"User permission denied"
+                                                    ] callbackId:command.callbackId];
+        }
+    }];
 }
 
 - (void) chooseAndSend:(CDVInvokedUrlCommand*)command;

@@ -5,6 +5,12 @@
 @interface SocialPlugin : CDVPlugin
 
 - (void) chooseAndSend:(CDVInvokedUrlCommand*)command;
-- (void) getAvailableAccounts:(CDVInvokedUrlCommand*)command;
+
+- (void) setFacebookIdentityData:(CDVInvokedUrlCommand *)command;
+- (void) getFacebookAccount:(CDVInvokedUrlCommand*)command;
+- (void) postToFacebook:(CDVInvokedUrlCommand*)command;
+- (void) getTwitterAccounts:(CDVInvokedUrlCommand*)command;
+- (void) postToTwitter:(CDVInvokedUrlCommand*)command;
+
 
 @end

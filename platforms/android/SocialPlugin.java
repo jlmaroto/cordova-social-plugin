@@ -3,7 +3,7 @@
 //  Copyright (c) 2013 Lee Crossley - http://ilee.co.uk
 //
 
-package uk.co.ilee.socialmessage;
+package es.peanutbutter.socialplugin;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -25,7 +25,7 @@ import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;
 
 @SuppressLint("DefaultLocale")
-public class SocialMessage extends CordovaPlugin {
+public class SocialPlugin extends CordovaPlugin {
 
 	@Override
 	public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
