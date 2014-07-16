@@ -141,7 +141,8 @@ NSMutableDictionary* facebookOptions;
                                               if (granted) {
                                                   NSArray *accounts = [_accountStore
                                                                        accountsWithAccountType:facebookAccountType];
-                                                  NSDictionary *parameters = @{@"message": text};
+                                                  NSMutableDictionary *parameters = [[NSMutableDictionary alloc] init];
+                                                  [parameters setValue:text forKeyPath:@"message"];
                                                   if(link!=nil){
                                                       [parameters setValue:link forKeyPath:@"link"];
                                                   }
