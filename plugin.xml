@@ -12,8 +12,8 @@
     </js-module>
     <platform name="ios">
         <config-file target="config.xml" parent="/*">
-            <feature name="socialplugin">
-                <param name="ios-package" value="socialplugin" />
+            <feature name="SocialPlugin">
+                <param name="ios-package" value="SocialPlugin" />
             </feature>
         </config-file>
         <header-file src="platforms/ios/Classes/SocialPlugin.h" />
